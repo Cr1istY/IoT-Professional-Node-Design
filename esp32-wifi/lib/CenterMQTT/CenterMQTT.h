@@ -20,10 +20,11 @@ public:
     };
 
     explicit CenterMQTT(const Config& cfg);
-    bool   connect();
-    bool   connected();
-    void   loop();
-    bool   publish(const char* payload);   // 直接发字符串
+    bool connect();
+    bool connected();
+    void loop();
+    bool publish(const char* payload);
+
 private:
     Config _cfg;
     WiFiClient   _client;
