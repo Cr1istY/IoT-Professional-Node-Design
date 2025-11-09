@@ -119,7 +119,6 @@ void loop() {
             message[sizeof(message) - 1] = '\0'; // 确保字符串结束符
             last = millis();
             Packet packet;
-
             packet.type = 2;
             packet.nodeId = i;
             packet.mac = nodeList[i].mac;
