@@ -12,7 +12,7 @@ void sendRegisterAck(const uint8_t *mac, uint8_t assignedId) {
         1,
         assignedId,
         mac,
-        "REGISTERED"
+        ""
     };
     esp_now_send(broadcastMac, (uint8_t*) &ack, sizeof(ack));
 }

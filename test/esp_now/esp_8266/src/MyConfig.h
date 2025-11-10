@@ -42,7 +42,7 @@ typedef struct {
     // 数据包类型：0 注册请求，1 注册确认，2 数据包
     uint8_t type;
     uint8_t nodeId;
-    uint8_t *mac; // mac地址确认，防止编号相同
+    const uint8_t *mac; // mac地址确认，防止编号相同
     char message[64];
 } __attribute__((packed)) Packet;
 

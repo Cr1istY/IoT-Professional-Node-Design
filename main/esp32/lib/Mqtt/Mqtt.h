@@ -5,11 +5,9 @@
 #ifndef ESP32_MQTT_H
 #define ESP32_MQTT_H
 
-
-
-class Mqtt {
-
-};
+#include <PubSubClient.h>
+#include "MyConfig.h"
+#include <esp_wifi.h>
 
 
 
