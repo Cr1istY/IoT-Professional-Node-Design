@@ -11,7 +11,6 @@ void sendRegisterAck(const uint8_t *mac, uint8_t assignedId) {
     Packet ack = {
         1,
         assignedId,
-        mac,
         ""
     };
     esp_now_send(broadcastMac, (uint8_t*) &ack, sizeof(ack));

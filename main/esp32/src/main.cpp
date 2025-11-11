@@ -29,6 +29,7 @@ void connectMQTT() {
     String clientId = MQTT_CLIENT_ID + String(random(0xffff), HEX);
     if (mqttClient.connect(clientId.c_str())) {
         Serial.println("✓ MQTT连接成功");
+        // 订阅 cmd/esp32/# 下的消息
         mqttClient.subscribe("cmd/esp32/#");
     }
 }
@@ -36,8 +37,9 @@ void connectMQTT() {
 // 发布到EMQX
 void publishToEMQX(uint8_t nodeId, const char* type, const char* value) {
     char jsonMsg[128];
-    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%s\", \"value\":%s}",
-             nodeId, type, value);
+    uint16_t ts = millis();
+    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%s\", \"value\":%s, \"ts\":%d}",
+             nodeId, type, value, ts);
     // 在 data/esp32/nodes 主题发布数据
     mqttClient.publish("data/esp32/nodes", jsonMsg);
 }
@@ -170,7 +172,6 @@ void loop() {
             Packet packet;
             packet.type = 2;
             packet.nodeId = i;
-            packet.mac = nodeList[i].mac;
             strncpy(packet.message, message, sizeof(packet.message) - 1);
             packet.message[sizeof(packet.message) - 1] = '\0'; // 确保字符串结尾安全
             esp_now_send(nodeList[i].mac, (uint8_t *)&packet, sizeof(packet));

@@ -9,7 +9,7 @@ uint8_t nodeId = 0;
 uint8_t center_mac[6] = {0};
 uint8_t broadcastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t wifiChannel = 0;
-uint8_t my_mac[6] = {0};
+// uint8_t my_mac[6] = {0};
 
 
 void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
@@ -71,13 +71,13 @@ void loop() {
         registered = false;
         memcpy(center_mac, broadcastMac, 6);
         lastAction = millis();
-        Packet regPkt = {0, nodeId, my_mac, ""};
+        Packet regPkt = {0, nodeId, ""};
         esp_now_send(broadcastMac, (uint8_t *) &regPkt, sizeof(regPkt));
         Serial.println("Node Unactive, Registering...");
         delay(500);
         return;
     }
-    Packet pkt = {2, nodeId, my_mac, "hello"};
+    Packet pkt = {2, nodeId, "hello"};
     esp_now_send(broadcastMac, (uint8_t *) &pkt, sizeof(pkt));
     delay(5000);
 
