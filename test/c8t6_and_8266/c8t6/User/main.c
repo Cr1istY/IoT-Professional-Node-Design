@@ -23,6 +23,7 @@ int main(void)
 	while (1)
 	{
 		// Serial_SendString("@TEST\r\n");
+		// Serial_SendString("Test\r\n");
 		if (Serial_RxFlag == 1)		//如果接收到数据包
 		{
 			
@@ -30,19 +31,22 @@ int main(void)
 			if (strcmp(Serial_RxPacket, "LED_ON") == 0)			//如果收到LED_ON指令
 			{
 				LED1_ON();										//点亮LED
-				Serial_SendString("@LED_ON_OK\r\n");				//串口回传一个字符串LED_ON_OK
+				Serial_SendString("LED_ON_OK\r\n");				//串口回传一个字符串LED_ON_OK
 			}
 			else if (strcmp(Serial_RxPacket, "LED_OFF") == 0)	//如果收到LED_OFF指令
 			{
 				LED1_OFF();										//熄灭LED
-				Serial_SendString("@LED_OFF_OK\r\n");			//串口回传一个字符串LED_OFF_OK
+				Serial_SendString("LED_OFF_OK\r\n");			//串口回传一个字符串LED_OFF_OK
 			}
 			else						//上述所有条件均不满足，即收到了未知指令
 			{
-				Serial_SendString("@ERROR_COMMAND\r\n");			//串口回传一个字符串ERROR_COMMAND
+				Serial_SendString("ERROR_COMMAND\r\n");			//串口回传一个字符串ERROR_COMMAND
 			}
 			
 			Serial_RxFlag = 0;			//处理完成后，需要将接收数据包标志位清零，否则将无法接收后续数据包
 		}
+		// 发送温度
+		Delay_ms(5000);
+		Serial_SendString("2,35.6\r\n");
 	}
 }

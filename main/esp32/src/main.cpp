@@ -9,6 +9,7 @@
 uint8_t nodeCount = 0; // 结点数量
 NodeInfo nodeList[MAX_NODE_SIZE]; // 注册结点表
 uint8_t currentChannel = 0; // 信道
+uint8_t extimes = 0;
 
 // 用于Mqtt通信
 WiFiClient espClient;
@@ -160,10 +161,14 @@ void setup() {
 }
 
 void loop() {
-
+    if (!mqttClient.connected()) {
+        connectMQTT();
+    } else {
+        mqttClient.loop();
+    }
     static uint32_t last = 0;
     // 间隔10s向节点轮询发送消息
-    if (millis() - last > 10000 && nodeCount > 0) {
+    if (millis() - last > 5000 && nodeCount > 0) {
         for (uint8_t i = 0; i < nodeCount; i++) {
             char message[64];
             strncpy(message, "Hello, I'm ESP32 Center", sizeof(message) - 1);
@@ -175,13 +180,13 @@ void loop() {
             strncpy(packet.message, message, sizeof(packet.message) - 1);
             packet.message[sizeof(packet.message) - 1] = '\0'; // 确保字符串结尾安全
             esp_now_send(nodeList[i].mac, (uint8_t *)&packet, sizeof(packet));
-            Serial.println("已发送");
-            delay(50);
+            // Serial.println("已发送");
         }
     }
 
     for (uint8_t i = 0; i < nodeCount; i++) {
-        nodeList[i].isActive = nodeList[i].lastSeen > millis() - 10000; // 更新活跃状态
+        nodeList[i].isActive = nodeList[i].lastSeen + 60000 > millis();
+        delay(50);
         if (!nodeList[i].isActive) {
             // 从peer中删除失活结点
             esp_err_t result = esp_now_del_peer(nodeList[i].mac);
@@ -200,16 +205,12 @@ void loop() {
             }
         }
     }
-
-
-    if (!mqttClient.connected()) {
-        connectMQTT();
-    } else {
-        mqttClient.loop();
+    if (millis() - (extimes * 100) > 100) {
+        extimes++;
     }
-
-
-
+    if (extimes > 100) {
+        extimes = 0;
+    }
 }
 
 

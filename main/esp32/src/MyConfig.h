@@ -30,7 +30,7 @@ typedef struct Node {
     uint8_t mac[6]; // mac地址
     uint8_t nodeId; // 结点编号
     bool isActive; // 是否活跃
-    uint32_t lastSeen; // 最后响应时间
+    int32_t lastSeen; // 最后响应时间
 } NodeInfo;
 
 

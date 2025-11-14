@@ -739,6 +739,11 @@
               <FileType>5</FileType>
               <FilePath>.\User\stm32f10x_it.h</FilePath>
             </File>
+            <File>
+              <FileName>test.txt</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\test.txt</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
@@ -750,5 +755,14 @@
     <components/>
     <files/>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>Project</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>
