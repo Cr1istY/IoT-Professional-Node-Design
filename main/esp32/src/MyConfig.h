@@ -42,7 +42,10 @@ typedef struct {
     char message[64];
 } __attribute__((packed)) Packet;
 
-
+struct call {
+    uint8_t nodeId;
+    uint8_t type;
+};
 
 
 

@@ -8,6 +8,6 @@
 #include "../../src/MyConfig.h"
 
 void sendRegisterAck(const uint8_t *mac, uint8_t assignedId);
-
+void sendMessage(const uint8_t *mac, uint8_t type, uint8_t nodeId);
 
 #endif //ESP32_PACKSENT_H

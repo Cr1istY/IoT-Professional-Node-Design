@@ -30,7 +30,14 @@ void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
     } else if (pkt->type == 2) {
         if (nodeId != pkt->nodeId) return;
         registered = true;
-        Serial.printf("中心数据：%s\n", pkt->message);
+    } else if (pkt->type == 3) {
+        // esp32端发送数据获取帧
+        Serial.printf("@3\r\n"); // 向stm32端请求数据
+    } else if (pkt->type == 4) {
+        // 获取数据帧
+        Serial.printf("@4\r\n"); // 向stm32端请求数据
+    } else {
+        // 忽略其他消息
     }
 }
 
@@ -63,30 +70,14 @@ void setup() {
     memcpy(center_mac, broadcastMac, 6); // 首先，广播发送注册
     esp_now_register_recv_cb(onDataRecv);
     Serial.println("ESP8266 Already!");
-    delay(10000);
 }
 
 void loop() {
-    // 失活检测，60s内无响应则认为结点失活
-    registered = lastAction + 60000 > millis();
-    if (!registered) {
-        // Serial.println("Send!");
-        memcpy(center_mac, broadcastMac, 6);
-        lastAction = millis();
-        Packet regPkt = {0, nodeId, ""};
-        esp_now_send(broadcastMac, (uint8_t *) &regPkt, sizeof(regPkt));
-        Serial.println("Node Unactive, Registering...");
-        delay(500);
-        return;
-    }
-    // Packet pkt = {2, nodeId, "hello"};
-    // esp_now_send(broadcastMac, (uint8_t *) &pkt, sizeof(pkt));
-    // delay(5000);
-    // 进行串口通信
-    // 接收
-    if (Serial.available() && registered) {
+    if (Serial.available()) {
         String data = Serial.readStringUntil('\n');
-        // 进行边缘处理，然后发送
+        // Serial.println(data);
+        // 进行边缘计算，然后发送
+        // stm32格式为 type,message
         uint8_t comma = data.indexOf(',');
         uint8_t messageType = data.substring(0, comma).toInt();
         String rawValue = data.substring(comma + 1);
@@ -96,8 +87,16 @@ void loop() {
         pkt.nodeId = nodeId;
         rawValue.toCharArray(pkt.message, sizeof(pkt.message));
         esp_now_send(center_mac, (uint8_t *) &pkt, sizeof(pkt));
-        delay(50);
-        Serial.println("已发送");
     }
-    delay(5000);
+    if (!registered) {
+        memcpy(center_mac, broadcastMac, 6);
+        lastAction = millis();
+        Packet regPkt = {0, nodeId, ""};
+        esp_now_send(broadcastMac, (uint8_t *) &regPkt, sizeof(regPkt));
+        delay(500);
+    }
+    // 失活检测，60s内无响应则认为结点失活
+    registered = lastAction + 60000 > millis();
+    // delay(50);
+
 }

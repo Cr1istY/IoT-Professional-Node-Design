@@ -1,10 +1,12 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include "MyConfig.h"
 #include "PackSent.h"
 #include <PubSubClient.h>
+
 
 uint8_t nodeCount = 0; // 结点数量
 NodeInfo nodeList[MAX_NODE_SIZE]; // 注册结点表
@@ -20,8 +22,29 @@ PubSubClient mqttClient(espClient);
 // payload：消息负载数据（实际内容）
 // len：负载数据的长度
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
-    Serial.print("EMQX命令: ");
-    Serial.println(topic);
+    // 将 payload 转换为字符串
+    String payloadStr = "";
+    for (unsigned int i = 0; i < len; i++) {
+        payloadStr += (char)payload[i];
+    }
+    // 解析JSON字符串为call结构体
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payloadStr);
+
+    if (error) {
+        Serial.print("JSON解析失败: ");
+        Serial.println(error.f_str());
+        return;
+    }
+
+    // 创建call结构体实例
+    call callStruct;
+    callStruct.nodeId = doc["nodeId"];
+    callStruct.type = doc["type"];
+
+    // 使用解析后的数据
+    // Serial.printf("解析结果 - nodeId: %d, type: %d\n", callStruct.nodeId, callStruct.type);
+    sendMessage(nodeList[callStruct.nodeId].mac, callStruct.type, callStruct.nodeId);
 }
 
 // 连接MQTT服务器
@@ -109,11 +132,35 @@ void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
         for (int i = 0; i < nodeCount; i++) {
             if (memcmp(nodeList[i].mac, mac, 6) == 0) {
                 nodeList[i].lastSeen = millis(); // 更新最后响应时间
-                Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
+                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
                 publishToEMQX(packet->nodeId, "message", packet->message);
                 break;
             }
         }
+    } else if (packet->type == 3) {
+        // 找到发送结点
+        for (int i = 0; i < nodeCount; i++) {
+            if (memcmp(nodeList[i].mac, mac, 6) == 0) {
+                nodeList[i].lastSeen = millis(); // 更新最后响应时间
+                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
+                publishToEMQX(packet->nodeId, "温度", packet->message);
+            }
+        }
+    } else if (packet->type == 4) {
+        // 找到发送结点
+        for (int i = 0; i < nodeCount; i++) {
+            if (memcmp(nodeList[i].mac, mac, 6) == 0) {
+                nodeList[i].lastSeen = millis(); // 更新最后响应时间
+                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
+                publishToEMQX(packet->nodeId, "湿度", packet->message);
+            }
+        }
+    } else if (packet->type == 5) {
+
+    } else if (packet->type == 6) {
+
+    } else if (packet->type == 7) {
+
     }
 
 }
@@ -166,31 +213,30 @@ void loop() {
     } else {
         mqttClient.loop();
     }
-    static uint32_t last = 0;
-    // 间隔10s向节点轮询发送消息
-    if (millis() - last > 5000 && nodeCount > 0) {
-        for (uint8_t i = 0; i < nodeCount; i++) {
-            char message[64];
-            strncpy(message, "Hello, I'm ESP32 Center", sizeof(message) - 1);
-            message[sizeof(message) - 1] = '\0'; // 确保字符串结束符
-            last = millis();
-            Packet packet;
-            packet.type = 2;
-            packet.nodeId = i;
-            strncpy(packet.message, message, sizeof(packet.message) - 1);
-            packet.message[sizeof(packet.message) - 1] = '\0'; // 确保字符串结尾安全
-            esp_now_send(nodeList[i].mac, (uint8_t *)&packet, sizeof(packet));
-            // Serial.println("已发送");
-        }
-    }
-
+    // static uint32_t last = 0;
+    // // 间隔10s向节点轮询发送消息
+    // if (millis() - last > 5000 && nodeCount > 0) {
+    //     for (uint8_t i = 0; i < nodeCount; i++) {
+    //         char message[64];
+    //         strncpy(message, "Hello, I'm ESP32 Center", sizeof(message) - 1);
+    //         message[sizeof(message) - 1] = '\0'; // 确保字符串结束符
+    //         last = millis();
+    //         Packet packet;
+    //         packet.type = 2;
+    //         packet.nodeId = i;
+    //         strncpy(packet.message, message, sizeof(packet.message) - 1);
+    //         packet.message[sizeof(packet.message) - 1] = '\0'; // 确保字符串结尾安全
+    //         esp_now_send(nodeList[i].mac, (uint8_t *)&packet, sizeof(packet));
+    //         // Serial.println("已发送");
+    //     }
+    // }
     for (uint8_t i = 0; i < nodeCount; i++) {
         nodeList[i].isActive = nodeList[i].lastSeen + 60000 > millis();
-        delay(50);
+        delay(20);
         if (!nodeList[i].isActive) {
             // 从peer中删除失活结点
             esp_err_t result = esp_now_del_peer(nodeList[i].mac);
-            delay(50);
+            delay(20);
             if (result == ESP_OK) {
                 // 从结点列表中删除结点
                 for (uint8_t j = i; j < nodeCount - 1; j++) {
@@ -204,12 +250,6 @@ void loop() {
                 Serial.printf("Node[%d] delete FAIL\n", i);
             }
         }
-    }
-    if (millis() - (extimes * 100) > 100) {
-        extimes++;
-    }
-    if (extimes > 100) {
-        extimes = 0;
     }
 }
 

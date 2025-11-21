@@ -34,12 +34,12 @@ void loop() {
     static unsigned long lastSend = 0;
 
     // 每2秒切换一次LED
-    if (millis() - lastSend > 2000) {
-        lastSend = millis();
-        static bool ledOn = false;
-        ledOn = !ledOn;
-        sendStringToSTM32(ledOn ? "LED_ON" : "LED_OFF");
-    }
+    // if (millis() - lastSend > 2000) {
+    //     lastSend = millis();
+    //     static bool ledOn = false;
+    //     ledOn = !ledOn;
+    //     sendStringToSTM32(ledOn ? "LED_ON" : "LED_OFF");
+    // }
 
     if (Serial.available()) {
         String data = Serial.readStringUntil('\n');
