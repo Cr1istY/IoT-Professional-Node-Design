@@ -28,7 +28,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
         payloadStr += (char)payload[i];
     }
     // 解析JSON字符串为call结构体
-    StaticJsonDocument<200> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payloadStr);
 
     if (error) {
@@ -59,13 +59,24 @@ void connectMQTT() {
 }
 
 // 发布到EMQX
-void publishToEMQX(uint8_t nodeId, const char* type, const char* value) {
+void publishToEMQX(uint8_t nodeId, uint8_t type, const char* value) {
     char jsonMsg[128];
     uint16_t ts = millis();
-    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%s\", \"value\":%s, \"ts\":%d}",
+    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%d\", \"value\":%s, \"ts\":%d}",
              nodeId, type, value, ts);
     // 在 data/esp32/nodes 主题发布数据
     mqttClient.publish("data/esp32/nodes", jsonMsg);
+}
+
+// 查找节点并更新其活动状态，然后发布消息到MQTT
+void handleNodeMessage(const uint8_t *mac, uint8_t nodeId, uint8_t messageType, const char* message) {
+    for (int i = 0; i < nodeCount; i++) {
+        if (memcmp(nodeList[i].mac, mac, 6) == 0) {
+            nodeList[i].lastSeen = millis(); // 更新最后响应时间
+            publishToEMQX(nodeId, messageType, message);
+            break;
+        }
+    }
 }
 
 
@@ -118,6 +129,8 @@ void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
             // 注册成功后，进行广播确认
             sendRegisterAck(mac, nodeList[nodeCount].nodeId);
             nodeCount++;
+            // 向MQTT服务器发布结点注册成功消息
+            publishToEMQX(packet->nodeId, packet->type, "注册成功");
             // esp8266的逻辑 （不由mac地址检查，由nodeId检查）
             // 1. 检查自己是否处于活跃状态
             // 2. 若自己没有处于活跃状态，则向esp32发送注册请求
@@ -127,41 +140,12 @@ void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
             // 4. 更新自己的活跃状态
         }
     } else if (packet->type == 1) {
-    } else if (packet->type == 2) {
-        // 找到发送结点
-        for (int i = 0; i < nodeCount; i++) {
-            if (memcmp(nodeList[i].mac, mac, 6) == 0) {
-                nodeList[i].lastSeen = millis(); // 更新最后响应时间
-                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
-                publishToEMQX(packet->nodeId, "message", packet->message);
-                break;
-            }
-        }
-    } else if (packet->type == 3) {
-        // 找到发送结点
-        for (int i = 0; i < nodeCount; i++) {
-            if (memcmp(nodeList[i].mac, mac, 6) == 0) {
-                nodeList[i].lastSeen = millis(); // 更新最后响应时间
-                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
-                publishToEMQX(packet->nodeId, "温度", packet->message);
-            }
-        }
-    } else if (packet->type == 4) {
-        // 找到发送结点
-        for (int i = 0; i < nodeCount; i++) {
-            if (memcmp(nodeList[i].mac, mac, 6) == 0) {
-                nodeList[i].lastSeen = millis(); // 更新最后响应时间
-                // Serial.printf("结点[%d]发送了消息：[%s]\n", i, packet->message);
-                publishToEMQX(packet->nodeId, "湿度", packet->message);
-            }
-        }
-    } else if (packet->type == 5) {
-
-    } else if (packet->type == 6) {
-
-    } else if (packet->type == 7) {
-
+        // esp32发送的注册确认包
+        // 不进行处理
+    } else {
+        handleNodeMessage(mac, packet->nodeId, packet->type, packet->message);
     }
+
 
 }
 
@@ -213,23 +197,6 @@ void loop() {
     } else {
         mqttClient.loop();
     }
-    // static uint32_t last = 0;
-    // // 间隔10s向节点轮询发送消息
-    // if (millis() - last > 5000 && nodeCount > 0) {
-    //     for (uint8_t i = 0; i < nodeCount; i++) {
-    //         char message[64];
-    //         strncpy(message, "Hello, I'm ESP32 Center", sizeof(message) - 1);
-    //         message[sizeof(message) - 1] = '\0'; // 确保字符串结束符
-    //         last = millis();
-    //         Packet packet;
-    //         packet.type = 2;
-    //         packet.nodeId = i;
-    //         strncpy(packet.message, message, sizeof(packet.message) - 1);
-    //         packet.message[sizeof(packet.message) - 1] = '\0'; // 确保字符串结尾安全
-    //         esp_now_send(nodeList[i].mac, (uint8_t *)&packet, sizeof(packet));
-    //         // Serial.println("已发送");
-    //     }
-    // }
     for (uint8_t i = 0; i < nodeCount; i++) {
         nodeList[i].isActive = nodeList[i].lastSeen + 60000 > millis();
         delay(20);

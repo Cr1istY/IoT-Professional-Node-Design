@@ -11,8 +11,6 @@ uint8_t nodeId = 0;
 uint8_t center_mac[6] = {0};
 uint8_t broadcastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t wifiChannel = 0;
-// uint8_t my_mac[6] = {0};
-
 
 void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
     if (len != sizeof(Packet)) return;
@@ -31,13 +29,20 @@ void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
         if (nodeId != pkt->nodeId) return;
         registered = true;
     } else if (pkt->type == 3) {
-        // esp32端发送数据获取帧
-        Serial.printf("@3\r\n"); // 向stm32端请求数据
+        // 温度
+        Serial.printf("@3\r\n");
     } else if (pkt->type == 4) {
-        // 获取数据帧
-        Serial.printf("@4\r\n"); // 向stm32端请求数据
+        // 湿度
+        Serial.printf("@4\r\n");
+    } else if (pkt->type == 5) {
+        // 红外
+        Serial.printf("@5\r\n");
+    } else if (pkt->type == 6) {
+        // 气体浓度
+        Serial.printf("@6\r\n");
     } else {
-        // 忽略其他消息
+        // 不做处理
+        delay(20);
     }
 }
 
@@ -64,12 +69,19 @@ void setup() {
     // 再断开wifi连接
     WiFi.disconnect();
     delay(1000);
+    // 首先，将广播地址加入peer list
     wifi_set_channel(wifiChannel);
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_add_peer(broadcastMac, ESP_NOW_ROLE_CONTROLLER, wifiChannel, NULL, 0);
-    memcpy(center_mac, broadcastMac, 6); // 首先，广播发送注册
+    memcpy(center_mac, broadcastMac, 6);
     esp_now_register_recv_cb(onDataRecv);
     Serial.println("ESP8266 Already!");
+    // 第一次注册
+    memcpy(center_mac, broadcastMac, 6);
+    lastAction = millis();
+    Packet regPkt = {0, nodeId, ""};
+    esp_now_send(broadcastMac, (uint8_t *) &regPkt, sizeof(regPkt));
+    delay(500);
 }
 
 void loop() {
@@ -100,3 +112,10 @@ void loop() {
     // delay(50);
 
 }
+
+// esp8266只做消息的转发：
+// 充当esp32和stm32沟通的桥梁
+// 1. 先发送注册包，等待注册确认
+// 2. 注册完成后，进入循环，等待数据
+// 3. 接收到数据，通过串口发送给stm32结点
+// 4. 从stm32结点返回消息给esp32
