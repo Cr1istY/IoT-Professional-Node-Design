@@ -43,7 +43,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
     callStruct.type = doc["type"];
 
     // 使用解析后的数据
-    // Serial.printf("解析结果 - nodeId: %d, type: %d\n", callStruct.nodeId, callStruct.type);
+    Serial.printf("解析结果 - nodeId: %d, type: %d\n", callStruct.nodeId, callStruct.type);
     sendMessage(nodeList[callStruct.nodeId].mac, callStruct.type, callStruct.nodeId);
 }
 
@@ -62,7 +62,7 @@ void connectMQTT() {
 void publishToEMQX(uint8_t nodeId, uint8_t type, const char* value) {
     char jsonMsg[128];
     uint16_t ts = millis();
-    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%d\", \"value\":%s, \"ts\":%d}",
+    snprintf(jsonMsg, 128, "{\"nodeId\":%d, \"type\":\"%d\", \"value\":\"%s\", \"ts\":%d}",
              nodeId, type, value, ts);
     // 在 data/esp32/nodes 主题发布数据
     mqttClient.publish("data/esp32/nodes", jsonMsg);

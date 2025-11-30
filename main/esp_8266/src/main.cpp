@@ -15,7 +15,7 @@ uint8_t wifiChannel = 0;
 void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
     if (len != sizeof(Packet)) return;
     Packet * pkt = (Packet *) data;
-    // Serial.printf("Received packet - Type: %d, NodeId: %d, Message: %s\n", pkt->type, pkt->nodeId, pkt->message);
+    Serial.printf("Received packet - Type: %d, NodeId: %d, Message: %s\n", pkt->type, pkt->nodeId, pkt->message);
     if (pkt->type == 1) {
         // 收到注册确认
         memcpy(center_mac, mac_addr, 6);
@@ -41,8 +41,7 @@ void onDataRecv(u8 * mac_addr, u8 * data, u8 len) {
         // 气体浓度
         Serial.printf("@6\r\n");
     } else {
-        // 不做处理
-        delay(20);
+        Serial.printf("@%d\r\n", pkt->type);
     }
 }
 
@@ -87,7 +86,7 @@ void setup() {
 void loop() {
     if (Serial.available()) {
         String data = Serial.readStringUntil('\n');
-        // Serial.println(data);
+        Serial.println(data);
         // 进行边缘计算，然后发送
         // stm32格式为 type,message
         uint8_t comma = data.indexOf(',');
